@@ -768,7 +768,7 @@ function frytkaSVG(mood){
   const acc = state.worn.acc;
   const shoes = state.worn.shoes;
   let hatEl = "";
-  if(hat==="hat_chef") hatEl = `<ellipse cx="70" cy="10" rx="22" ry="14" fill="white" stroke="#241533" stroke-width="4.5"/><rect x="52" y="6" width="36" height="14" rx="5" fill="white" stroke="#241533" stroke-width="4.5"/>`;
+  if(hat==="hat_chef") hatEl = `<path d="M28,16 Q26,-4 50,-12 Q70,-18 90,-12 Q114,-4 112,16 Z" fill="white" stroke="#241533" stroke-width="4.5" stroke-linejoin="round"/><path d="M40,12 L100,12 L100,30 Q100,34 96,34 L44,34 Q40,34 40,30 Z" fill="white" stroke="#241533" stroke-width="4.5" stroke-linejoin="round"/><path d="M52,-8 Q50,4 52,12" stroke="#241533" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.45"/><path d="M88,-8 Q90,4 88,12" stroke="#241533" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.45"/>`;
   if(hat==="hat_party") hatEl = `<polygon points="70,-16 50,18 90,18" fill="url(#redGrad)" stroke="#241533" stroke-width="4.5" stroke-linejoin="round"/><circle cx="70" cy="-16" r="4.5" fill="#FFD700" stroke="#241533" stroke-width="3"/>`;
   if(hat==="hat_crown") hatEl = `<polygon points="50,18 56,-4 64,10 70,-8 76,10 84,-4 90,18" fill="url(#goldGrad)" stroke="#241533" stroke-width="4.5" stroke-linejoin="round"/>`;
   if(hat==="hat_cap") hatEl = `<path d="M48,16 A22,18 0 0,1 92,16 Z" fill="url(#tealGrad)" stroke="#241533" stroke-width="4.5"/><rect x="84" y="10" width="22" height="8" rx="4" fill="url(#tealGrad)" stroke="#241533" stroke-width="4.5"/>`;
@@ -2211,8 +2211,32 @@ function showOfflineBanner(){
 /* ---- "Co nowego?" — pokazuje się raz, po każdej aktualizacji apki ----
    WAŻNE (dla mnie / Claude'a przy kolejnych zmianach): przy każdej nowej
    wersji apki podnieś APP_VERSION i dopisz nowy wpis na GÓRZE CHANGELOG. */
-const APP_VERSION = "2026.07.13m";
+const APP_VERSION = "2026.07.13q";
 const CHANGELOG = [
+  {
+    version: "2026.07.13q",
+    changes: [
+      "Czapka kucharza: pasek teraz na pełną szerokość ciała Frytka, pompon wyraźnie wychodzi poza sylwetkę",
+    ]
+  },
+  {
+    version: "2026.07.13p",
+    changes: [
+      "Czapka kucharza przerobiona na wzór prawdziwej — szeroki, grzybkowaty pompon nad wyraźnym paskiem, z liniami marszczenia materiału",
+    ]
+  },
+  {
+    version: "2026.07.13o",
+    changes: [
+      "Poprawione proporcje czapki kucharza — wyraźniejszy pasek, pełniejszy pompon",
+    ]
+  },
+  {
+    version: "2026.07.13n",
+    changes: [
+      "Naprawiona rozjeżdżająca się czapka kucharza — teraz jeden spójny kształt zamiast dwóch niedopasowanych",
+    ]
+  },
   {
     version: "2026.07.13m",
     changes: [
