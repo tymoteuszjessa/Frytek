@@ -235,6 +235,8 @@ input[type=file]{ display:none; }
   box-shadow:0 12px 0 rgba(0,0,0,0.15);
 }
 .overlay-card .big{ font-size:64px; margin-bottom:6px; display:flex; justify-content:center; }
+.overlay-frytek{ width:110px; margin:0 auto 6px; }
+.overlay-frytek svg{ width:100%; height:auto; overflow:visible; animation:flCelebrate 0.9s ease; }
 .overlay-card h2{ margin:0 0 6px; font-size:24px; }
 .overlay-card p{ margin:0 0 18px; color:var(--plum-soft); font-weight:700; }
 .coin-gain{ display:inline-flex; align-items:center; gap:6px; background:var(--cream); border-radius:999px; padding:8px 16px; font-family:'Baloo 2'; font-weight:800; color:var(--amber-text); margin-bottom:16px; }
@@ -748,6 +750,12 @@ function productUnlocked(p){
   return isDone(siblings[idx-1].id);
 }
 function sectionsOf(m){ return [...new Set(byModule(m).map(p=>p.section))]; }
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = String(str == null ? '' : str);
+  return div.innerHTML;
+}
 
 function go(r){ route = Object.assign({}, route, r); render(); window.scrollTo(0,0); }
 
@@ -1274,7 +1282,7 @@ function screenGoals(){
       return `
       <div class="goal-card ${g.achieved?'achieved':''}">
         <div class="goal-top">
-          <h4>${g.achieved? '✅ ' : ''}${g.name}</h4>
+          <h4>${g.achieved? '✅ ' : ''}${escapeHtml(g.name)}</h4>
           <div class="goal-cost">${coinIconSVG(16)} ${g.cost}</div>
         </div>
         ${!g.achieved ? `
@@ -1440,6 +1448,17 @@ function onPhoto(pid){
   }).catch(()=>{});
 }
 
+const FRYTEK_STEP_CONGRATS = [
+  "Brawo, spróbowałeś!",
+  "Jestem z Ciebie dumny!",
+  "Świetna robota!",
+  "Tak trzymać, odkrywco!",
+  "To był odważny kęs!",
+  "Super, że spróbowałeś!",
+  "Widziałem, jak Ci poszło!",
+  "Coraz śmielej Ci idzie!",
+];
+
 function completeProduct(m,s,pid){
   if(state.done[pid]) return;
   const product = PRODUCTS.find(x=>x.id===pid);
@@ -1451,7 +1470,7 @@ function completeProduct(m,s,pid){
   if(wrap){ wrap.classList.add('celebrate'); setTimeout(()=>wrap.classList.remove('celebrate'), 900); }
 
   if(product.bonus){
-    showOverlay('⭐', `Super Wyzwanie zaliczone!`, `Niesamowite połączenie smaków!`, 20);
+    showOverlay('⭐', `Super Wyzwanie zaliczone!`, `Niesamowite połączenie smaków!`, 20, true);
     return;
   }
 
@@ -1459,11 +1478,12 @@ function completeProduct(m,s,pid){
   const wasModuleDone = moduleDone(m);
 
   if(wasModuleDone){
-    showOverlay(trophyIconSVG(52), `Puchar zdobyty!`, `Ukończyłeś cały Moduł ${m}!`, 0);
+    showOverlay(trophyIconSVG(52), `Puchar zdobyty!`, `Ukończyłeś cały Moduł ${m}!`, 0, true);
   } else if(wasSectionDone){
-    showOverlay(medalIconSVG(52), `Medal zdobyty!`, `Ukończyłeś całą sekcję!`, 5);
+    showOverlay(medalIconSVG(52), `Medal zdobyty!`, `Ukończyłeś całą sekcję!`, 5, true);
   } else {
-    showOverlay('🎉', `Super robota!`, `Spróbowałeś nowego produktu!`, 5);
+    const congrats = FRYTEK_STEP_CONGRATS[Math.floor(Math.random()*FRYTEK_STEP_CONGRATS.length)];
+    showOverlay('🎉', congrats, `Spróbowałeś nowego produktu!`, 5, true);
   }
 }
 
@@ -1550,7 +1570,7 @@ function redeemGoal(id){
     goal.achieved = true;
     saveState();
     render();
-    showOverlay('🎁', `Nagroda odebrana!`, `${goal.name} — czas to zrealizować!`, 0);
+    showOverlay('🎁', `Nagroda odebrana!`, `${escapeHtml(goal.name)} — czas to zrealizować!`, 0);
   };
   if(!state.pin){
     openPinModal('setup1', doRedeem);
@@ -1653,6 +1673,38 @@ function closeModal(id){
   if(el) document.body.removeChild(el);
 }
 
+const PIN_ATTEMPTS_KEY = "frytka_pin_attempts_v1";
+const PIN_MAX_ATTEMPTS = 5;
+const PIN_LOCKOUT_MS = 60000; // 60 sekund blokady po zbyt wielu złych próbach
+
+function getPinAttemptState(){
+  try{
+    const raw = localStorage.getItem(PIN_ATTEMPTS_KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { count:0, lockedUntil:0 };
+}
+function savePinAttemptState(s){
+  try{ localStorage.setItem(PIN_ATTEMPTS_KEY, JSON.stringify(s)); }catch(e){}
+}
+function pinLockRemainingMs(){
+  return Math.max(0, getPinAttemptState().lockedUntil - Date.now());
+}
+function registerFailedPinAttempt(){
+  const s = getPinAttemptState();
+  s.count = (s.count||0) + 1;
+  if(s.count >= PIN_MAX_ATTEMPTS){
+    s.lockedUntil = Date.now() + PIN_LOCKOUT_MS;
+    s.count = 0;
+  }
+  savePinAttemptState(s);
+}
+function registerSuccessfulPinAttempt(){
+  savePinAttemptState({ count:0, lockedUntil:0 });
+}
+
+let pinLockTimer = null;
+
 function openPinModal(mode, onSuccess){
   pinState = { mode, entry:"", first:"", onSuccess };
   const div = document.createElement('div');
@@ -1660,6 +1712,16 @@ function openPinModal(mode, onSuccess){
   div.id = 'pinModal';
   div.innerHTML = pinModalHTML();
   document.body.appendChild(div);
+  if(mode==='verify') startPinLockWatcher();
+}
+
+function startPinLockWatcher(){
+  clearInterval(pinLockTimer);
+  pinLockTimer = setInterval(()=>{
+    if(!document.getElementById('pinModal')){ clearInterval(pinLockTimer); return; }
+    if(pinLockRemainingMs() <= 0){ clearInterval(pinLockTimer); }
+    refreshPinModal();
+  }, 1000);
 }
 
 function pinTitle(){
@@ -1675,12 +1737,16 @@ function pinSub(){
 
 function pinModalHTML(){
   const dots = [0,1,2,3].map(i=>`<div class="d ${i<pinState.entry.length?'filled':''}"></div>`).join('');
+  const isVerify = pinState.mode==='verify';
+  const lockedMs = isVerify ? pinLockRemainingMs() : 0;
+  const locked = lockedMs > 0;
+  const lockedSeconds = Math.ceil(lockedMs/1000);
   return `
     <div class="modal-card">
       <h3>${pinTitle()}</h3>
-      <p>${pinSub()}</p>
+      <p>${locked ? `Zbyt wiele prób. Spróbuj ponownie za ${lockedSeconds}s.` : pinSub()}</p>
       <div class="pin-dots">${dots}</div>
-      <div class="pin-pad">
+      <div class="pin-pad" style="${locked?'opacity:0.4; pointer-events:none;':''}">
         ${[1,2,3,4,5,6,7,8,9].map(n=>`<button onclick="pinPress(${n})">${n}</button>`).join('')}
         <button onclick="closeModal('pinModal')" style="background:transparent;border:none;box-shadow:none;color:var(--plum-soft)">Anuluj</button>
         <button onclick="pinPress(0)">0</button>
@@ -1696,6 +1762,7 @@ function refreshPinModal(){
 }
 
 function pinPress(n){
+  if(pinState.mode==='verify' && pinLockRemainingMs() > 0) return;
   if(pinState.entry.length>=4) return;
   pinState.entry += String(n);
   refreshPinModal();
@@ -1726,24 +1793,36 @@ function handlePinComplete(){
       refreshPinModal();
     }
   } else if(mode==='verify'){
+    if(pinLockRemainingMs() > 0){
+      pinState.entry = "";
+      refreshPinModal();
+      return;
+    }
     if(pinState.entry === state.pin){
+      registerSuccessfulPinAttempt();
       closeModal('pinModal');
       if(pinState.onSuccess) pinState.onSuccess();
     } else {
+      registerFailedPinAttempt();
       const err = document.getElementById('pinError');
-      if(err) err.textContent = 'Zły PIN, spróbuj jeszcze raz.';
+      const remaining = pinLockRemainingMs();
+      if(err) err.textContent = remaining>0 ? '' : 'Zły PIN, spróbuj jeszcze raz.';
       pinState.entry = "";
       refreshPinModal();
+      if(remaining > 0) startPinLockWatcher();
     }
   }
 }
 
-function showOverlay(emoji, title, sub, coinGain){
+function showOverlay(emoji, title, sub, coinGain, withFrytek){
+  if(withFrytek) speakFrytek(title);
   const div = document.createElement('div');
   div.className = 'overlay';
   div.innerHTML = `
     <div class="overlay-card">
-      <div class="big">${emoji}</div>
+      ${withFrytek
+        ? `<div class="overlay-frytek">${frytkaSVG()}</div>`
+        : `<div class="big">${emoji}</div>`}
       <h2>${title}</h2>
       <p>${sub}</p>
       ${coinGain? `<div class="coin-gain">${coinIconSVG(20)} +${coinGain}</div>` : ''}
@@ -1785,6 +1864,15 @@ let audioCtx = null;
 let audioUnlocked = false;
 let audioDestination = null;
 let musicGainNode = null;
+
+document.addEventListener('visibilitychange', ()=>{
+  if(!audioCtx) return;
+  if(document.hidden){
+    audioCtx.suspend().catch(()=>{});
+  } else if(musicOn){
+    audioCtx.resume().catch(()=>{});
+  }
+});
 
 function getAudioCtx(){
   if(!audioCtx){
@@ -2121,8 +2209,21 @@ function showOfflineBanner(){
 /* ---- "Co nowego?" — pokazuje się raz, po każdej aktualizacji apki ----
    WAŻNE (dla mnie / Claude'a przy kolejnych zmianach): przy każdej nowej
    wersji apki podnieś APP_VERSION i dopisz nowy wpis na GÓRZE CHANGELOG. */
-const APP_VERSION = "2026.07.13g";
+const APP_VERSION = "2026.07.13i";
 const CHANGELOG = [
+  {
+    version: "2026.07.13i",
+    changes: [
+      "Muzyka i dźwięki wyciszają się teraz automatycznie po zejściu do ekranu głównego telefonu",
+    ]
+  },
+  {
+    version: "2026.07.13h",
+    changes: [
+      "Frytek teraz naprawdę gratuluje po każdym spróbowanym produkcie — widać jego twarz i słychać jego głos",
+      "Więcej różnorodnych gratulacji zamiast zawsze tego samego tekstu",
+    ]
+  },
   {
     version: "2026.07.13g",
     changes: [
