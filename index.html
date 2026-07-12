@@ -52,6 +52,13 @@ body{
 h1,h2,h3,.display{font-family:'Baloo 2',sans-serif;}
 #app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:112px;padding-top:env(safe-area-inset-top);position:relative;}
 
+#offlineBanner{
+  position:fixed; top:0; left:0; right:0; z-index:500;
+  background:#FFD23F; color:#241533; font-weight:800; font-size:12.5px; text-align:center;
+  padding:10px 16px calc(8px + env(safe-area-inset-top)); padding-top:calc(10px + env(safe-area-inset-top));
+  border-bottom:2px solid #241533;
+}
+
 /* Top bar */
 .topbar{
   display:flex;align-items:center;justify-content:space-between;
@@ -563,20 +570,30 @@ const firebaseConfig = {
   appId: "1:876954098350:web:754cb78762d623e5162b3f",
   measurementId: "G-T0XKMX9SRL"
 };
-firebase.initializeApp(firebaseConfig);
-const fbAuth = firebase.auth();
-const fbDb = firebase.firestore();
+let firebaseOK = false;
+let fbAuth = null;
+let fbDb = null;
+try{
+  if(typeof firebase !== 'undefined'){
+    firebase.initializeApp(firebaseConfig);
+    fbAuth = firebase.auth();
+    fbDb = firebase.firestore();
+    firebaseOK = true;
+  }
+}catch(e){
+  firebaseOK = false;
+}
 let currentUser = null;
 let cloudSaveTimer = null;
 let cloudSyncSuspended = false; // true while we're pulling from cloud, to avoid an echo write
 
 function cloudDocRef(){
-  if(!currentUser) return null;
+  if(!firebaseOK || !currentUser) return null;
   return fbDb.collection('frytekUsers').doc(currentUser.uid);
 }
 
 function cloudSaveState(){
-  if(!currentUser || cloudSyncSuspended) return;
+  if(!firebaseOK || !currentUser || cloudSyncSuspended) return;
   clearTimeout(cloudSaveTimer);
   cloudSaveTimer = setTimeout(()=>{
     const ref = cloudDocRef();
@@ -585,13 +602,21 @@ function cloudSaveState(){
   }, 600);
 }
 
+function progressScore(s){
+  return (Object.keys((s && s.done) || {}).length * 1000) + ((s && s.coins) || 0);
+}
+
 function cloudLoadState(){
   const ref = cloudDocRef();
   if(!ref) return Promise.resolve();
+  const localState = state;
   return ref.get().then(doc=>{
     if(doc.exists){
+      const cloudState = doc.data();
+      const localIsFurtherAlong = progressScore(localState) > progressScore(cloudState);
+      const winner = localIsFurtherAlong ? localState : cloudState;
       cloudSyncSuspended = true;
-      state = doc.data();
+      state = winner;
       if(state.pin===undefined) state.pin=null;
       if(state.onboarded===undefined) state.onboarded=true;
       if(state.goals===undefined) state.goals=[];
@@ -599,6 +624,11 @@ function cloudLoadState(){
       if(state.worn && state.worn.shoes===undefined) state.worn.shoes=null;
       try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
       cloudSyncSuspended = false;
+      if(localIsFurtherAlong){
+        // lokalny postęp (np. zrobiony offline) jest bardziej zaawansowany - odeślij go do chmury,
+        // żeby nigdy nie zgubić postępów zrobionych zanim synchronizacja zadziałała
+        return cloudDocRef().set(state);
+      }
     } else {
       // pierwsza synchronizacja tego konta - wyślij obecny lokalny stan do chmury
       return cloudDocRef().set(state);
@@ -1975,11 +2005,25 @@ function initApp(){
   maybeShowChangelog();
 }
 
+function showOfflineBanner(){
+  const div = document.createElement('div');
+  div.id = 'offlineBanner';
+  div.innerHTML = `⚠️ Tryb offline — postępy zapisują się TYLKO na tym urządzeniu i nie synchronizują się z innymi. Spróbuj otworzyć apkę ponownie później.`;
+  document.body.appendChild(div);
+}
+
 /* ---- "Co nowego?" — pokazuje się raz, po każdej aktualizacji apki ----
    WAŻNE (dla mnie / Claude'a przy kolejnych zmianach): przy każdej nowej
    wersji apki podnieś APP_VERSION i dopisz nowy wpis na GÓRZE CHANGELOG. */
-const APP_VERSION = "2026.07.13";
+const APP_VERSION = "2026.07.13b";
 const CHANGELOG = [
+  {
+    version: "2026.07.13b",
+    changes: [
+      "Zabezpieczenie: postępy zrobione offline nigdy nie zostaną nadpisane starszą wersją z chmury",
+      "Wyraźny żółty baner, gdy apka działa bez synchronizacji (offline)",
+    ]
+  },
   {
     version: "2026.07.13",
     changes: [
@@ -2127,18 +2171,25 @@ function resetPassword(){
 }
 
 function logOut(){
-  fbAuth.signOut();
+  if(firebaseOK) fbAuth.signOut();
 }
 
-fbAuth.onAuthStateChanged(user=>{
-  if(user){
-    currentUser = user;
-    cloudLoadState().then(initApp);
-  } else {
-    currentUser = null;
-    renderAuthScreen('signin');
-  }
-});
+if(firebaseOK){
+  fbAuth.onAuthStateChanged(user=>{
+    if(user){
+      currentUser = user;
+      cloudLoadState().then(initApp);
+    } else {
+      currentUser = null;
+      renderAuthScreen('signin');
+    }
+  });
+} else {
+  // Firebase niedostępny (np. problem z siecią/blokada) - apka rusza normalnie,
+  // lokalnie na tym urządzeniu, bez logowania i synchronizacji w chmurze.
+  initApp();
+  showOfflineBanner();
+}
 </script>
 </body>
 </html>
