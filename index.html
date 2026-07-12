@@ -1905,7 +1905,6 @@ render();
 renderMascot();
 scheduleIdleAction();
 maybeShowOnboarding();
-maybeShowChangelog();
 initSwipeNav();
 
 /* ---- "Co nowego?" — pokazuje się raz, po każdej aktualizacji apki ----
@@ -1934,12 +1933,9 @@ const CHANGELOG = [
 ];
 
 function maybeShowChangelog(){
-  if(!state.onboarded) return; // pierwsze uruchomienie obsługuje samouczek, nie to okno
   if(state.lastSeenVersion === APP_VERSION) return;
-  const isFirstEverCheck = state.lastSeenVersion === null;
   state.lastSeenVersion = APP_VERSION;
   saveState();
-  if(isFirstEverCheck) return; // nie pokazuj "co nowego" tuż po samouczku
 
   const entry = CHANGELOG.find(c => c.version === APP_VERSION) || CHANGELOG[0];
   const div = document.createElement('div');
@@ -1996,6 +1992,7 @@ function maybeShowOnboarding(){
   document.body.appendChild(overlay);
 }
 
+maybeShowChangelog();
 </script>
 </body>
 </html>
