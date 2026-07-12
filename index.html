@@ -598,9 +598,9 @@ const STORAGE_KEY = "frytka_state_v1";
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){ const s = JSON.parse(raw); if(s.pin===undefined) s.pin=null; if(s.onboarded===undefined) s.onboarded=true; if(s.goals===undefined) s.goals=[]; if(s.lastSeenVersion===undefined) s.lastSeenVersion=null; if(s.worn && s.worn.shoes===undefined) s.worn.shoes=null; return s; }
+    if(raw){ const s = JSON.parse(raw); if(s.pin===undefined) s.pin=null; if(s.onboarded===undefined) s.onboarded=true; if(s.goals===undefined) s.goals=[]; if(s.lastSeenVersion===undefined) s.lastSeenVersion=null; if(s.worn && s.worn.shoes===undefined) s.worn.shoes=null; if(s.resetMarker===undefined) s.resetMarker=null; return s; }
   }catch(e){}
-  return { coins:0, done:{}, owned:["hat_chef"], worn:{hat:"hat_chef", top:null, acc:null, shoes:null}, pin:null, onboarded:false, goals:[], lastSeenVersion:null };
+  return { coins:0, done:{}, owned:["hat_chef"], worn:{hat:"hat_chef", top:null, acc:null, shoes:null}, pin:null, onboarded:false, goals:[], lastSeenVersion:null, resetMarker:null };
 }
 function saveState(){
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
@@ -670,6 +670,7 @@ function cloudLoadState(){
       if(state.goals===undefined) state.goals=[];
       if(state.lastSeenVersion===undefined) state.lastSeenVersion=null;
       if(state.worn && state.worn.shoes===undefined) state.worn.shoes=null;
+      if(state.resetMarker===undefined) state.resetMarker=null;
       try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){}
       cloudSyncSuspended = false;
       if(localIsFurtherAlong){
@@ -2211,8 +2212,15 @@ function showOfflineBanner(){
 /* ---- "Co nowego?" — pokazuje się raz, po każdej aktualizacji apki ----
    WAŻNE (dla mnie / Claude'a przy kolejnych zmianach): przy każdej nowej
    wersji apki podnieś APP_VERSION i dopisz nowy wpis na GÓRZE CHANGELOG. */
-const APP_VERSION = "2026.07.13q";
+const APP_VERSION = "2026.07.14a";
 const CHANGELOG = [
+  {
+    version: "2026.07.14a",
+    changes: [
+      "🔄 Reset postępów: wszystkie monety, ukończone produkty, ubranka i cele wracają do zera dla wszystkich kont",
+      "Poprawione proporcje czapki kucharza (pasek na pełną szerokość, pompon poza sylwetkę)",
+    ]
+  },
   {
     version: "2026.07.13q",
     changes: [
@@ -2472,11 +2480,35 @@ function logOut(){
   if(firebaseOK) fbAuth.signOut();
 }
 
+/* ---- Jednorazowy, wymuszony reset monet i postępów ----
+   WAŻNE (dla mnie / Claude'a): to reset wykonuje się TYLKO RAZ na konto/urządzenie,
+   dokładnie przy przejściu na RESET_MARKER poniżej. Nie zmieniaj tej wartości ponownie,
+   chyba że użytkownik poprosi o KOLEJNY reset w przyszłości. */
+const RESET_MARKER = "2026-07-14-reset1";
+function applyForcedResetIfNeeded(){
+  if(state.resetMarker === RESET_MARKER) return;
+  state = {
+    coins: 0,
+    done: {},
+    owned: ["hat_chef"],
+    worn: { hat:"hat_chef", top:null, acc:null, shoes:null },
+    pin: state.pin,
+    onboarded: state.onboarded,
+    goals: [],
+    lastSeenVersion: state.lastSeenVersion,
+    resetMarker: RESET_MARKER,
+  };
+  saveState();
+}
+
 if(firebaseOK){
   fbAuth.onAuthStateChanged(user=>{
     if(user){
       currentUser = user;
-      cloudLoadState().then(initApp);
+      cloudLoadState().then(()=>{
+        applyForcedResetIfNeeded();
+        initApp();
+      });
     } else {
       currentUser = null;
       renderAuthScreen('signin');
@@ -2485,6 +2517,7 @@ if(firebaseOK){
 } else {
   // Firebase niedostępny (np. problem z siecią/blokada) - apka rusza normalnie,
   // lokalnie na tym urządzeniu, bez logowania i synchronizacji w chmurze.
+  applyForcedResetIfNeeded();
   initApp();
   showOfflineBanner();
 }
