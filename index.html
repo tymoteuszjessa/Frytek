@@ -118,7 +118,7 @@ h1,h2,h3,.display{font-family:'Baloo 2',sans-serif;}
 .fairy-trophy{ position:absolute; top:-10px; right:-10px; background:white; border-radius:50%; border:3px solid var(--plum); padding:3px; }
 .fairy-label{ margin-top:8px; text-align:center; font-size:12.5px; font-weight:700; color:var(--plum); line-height:1.35; background:rgba(255,255,255,0.85); border-radius:10px; padding:3px 8px; }
 .fairy-sub{ color:var(--plum-soft); font-weight:800; }
-.fairy-decor{ position:absolute; font-size:22px; opacity:0.85; pointer-events:none; animation:fairyBob 3s ease-in-out infinite; }
+.fairy-decor{ position:absolute; opacity:0.9; pointer-events:none; animation:fairyBob 3s ease-in-out infinite; filter:drop-shadow(0 2px 0 rgba(61,35,82,0.1)); }
 @keyframes fairyBob{ 0%,100%{ transform:translateY(0);} 50%{ transform:translateY(-6px);} }
 .module-card{
   background:var(--card); border-radius:var(--radius); padding:16px 18px;
@@ -872,6 +872,19 @@ function frytkaSVG(mood){
   </svg>`;
 }
 
+function decorIconSVG(name, size){
+  size = size || 26;
+  const ICONS = {
+    star: `<path d="M16,4 L19,12 L28,12 L21,17 L23,26 L16,20 L9,26 L11,17 L4,12 L13,12 Z" fill="#FFD569" stroke="#241533" stroke-width="2.2" stroke-linejoin="round"/>`,
+    rainbow: `<path d="M4,26 A12,12 0 0,1 28,26" fill="none" stroke="#E8503F" stroke-width="3.5" stroke-linecap="round"/><path d="M8,26 A8,8 0 0,1 24,26" fill="none" stroke="#FFC845" stroke-width="3.5" stroke-linecap="round"/><path d="M12,26 A4,4 0 0,1 20,26" fill="none" stroke="#17766D" stroke-width="3.5" stroke-linecap="round"/>`,
+    cloud: `<path d="M8,22 Q4,22 4,18 Q4,14 8,14 Q9,9 15,9 Q21,9 22,14 Q27,14 27,19 Q27,22 23,22 Z" fill="white" stroke="#241533" stroke-width="2.2" stroke-linejoin="round"/>`,
+    butterfly: `<ellipse cx="10" cy="12" rx="7" ry="6" fill="#FF9E8F" stroke="#241533" stroke-width="2" transform="rotate(-15 10 12)"/><ellipse cx="22" cy="12" rx="7" ry="6" fill="#5DDFD1" stroke="#241533" stroke-width="2" transform="rotate(15 22 12)"/><ellipse cx="10" cy="22" rx="5" ry="4" fill="#FF9E8F" stroke="#241533" stroke-width="2" transform="rotate(-10 10 22)"/><ellipse cx="22" cy="22" rx="5" ry="4" fill="#5DDFD1" stroke="#241533" stroke-width="2" transform="rotate(10 22 22)"/><line x1="16" y1="6" x2="16" y2="26" stroke="#241533" stroke-width="2.5" stroke-linecap="round"/>`,
+    mushroom: `<path d="M6,16 Q6,6 16,6 Q26,6 26,16 Z" fill="#E8503F" stroke="#241533" stroke-width="2.2" stroke-linejoin="round"/><circle cx="11" cy="11" r="1.6" fill="white"/><circle cx="20" cy="10" r="1.8" fill="white"/><circle cx="16" cy="14" r="1.4" fill="white"/><rect x="11" y="16" width="10" height="11" rx="4" fill="#FFF6E8" stroke="#241533" stroke-width="2.2"/>`,
+    balloon: `<ellipse cx="16" cy="12" rx="9" ry="11" fill="#FF6B5B" stroke="#241533" stroke-width="2.2"/><path d="M16,23 L14,27 L18,27 Z" fill="#241533"/><line x1="16" y1="27" x2="16" y2="30" stroke="#241533" stroke-width="1.8"/>`,
+  };
+  return `<svg width="${size}" height="${size}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="overflow:visible;">${ICONS[name]||''}</svg>`;
+}
+
 function coinIconSVG(size){
   size = size || 20;
   return `<svg width="${size}" height="${size}" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-4px;">
@@ -929,7 +942,7 @@ function screenWelcome(){
 function screenHome(){
   const totalDone = totalProductsDoneCount();
   const path = buildWindingPath(5, {width:320});
-  const DECORS = ["✨","⭐","🌈","☁️","🦋","🍄","🎈","🌟"];
+  const DECORS = ["star","rainbow","cloud","butterfly","mushroom","balloon","star","cloud"];
   let nextUpAssigned = false;
   return `
   <div class="topbar">
@@ -965,7 +978,7 @@ function screenHome(){
       const decorEmoji = DECORS[i % DECORS.length];
       const decorSide = (i%2===0) ? `left:${p.x-72}px; top:${p.y-58}px;` : `left:${p.x+48}px; top:${p.y+38}px;`;
       return `
-      <div class="fairy-decor" style="${decorSide} animation-delay:${i*0.3}s;">${decorEmoji}</div>
+      <div class="fairy-decor" style="${decorSide} animation-delay:${i*0.3}s;">${decorIconSVG(decorEmoji, 28)}</div>
       <div class="fairy-node" style="left:${p.x}px; top:${p.y}px;">
         <div class="fairy-badge ${unlocked?'':'locked'} ${isNextUp?'next-up':''}" style="background:${unlocked? meta.color : '#eee'}" onclick="${unlocked? `go({screen:'module', module:${m}})` : ''}">
           ${unlocked? moduleIconSVG(m,34) : lockIconSVG(30)}
@@ -985,7 +998,7 @@ function screenModule(m){
   const meta = MODULE_META[m];
   const secs = sectionsOf(m);
   const path = buildWindingPath(secs.length, {width:320, stepY:132, marginY:60});
-  const DECORS = ["🌟","🍄","🦋","☁️","🎈","🌈"];
+  const DECORS = ["star","mushroom","butterfly","cloud","balloon","rainbow"];
   let nextUpAssigned = false;
   return `
   <div class="topbar">
@@ -1016,7 +1029,7 @@ function screenModule(m){
       if(isNextUp) nextUpAssigned = true;
       const themedIcon = sectionIconSVG(m, s, 26);
       const statusIcon = unlocked ? (done? medalIconSVG(26) : (themedIcon || crateIconSVG(26))) : lockIconSVG(26);
-      const decor = (i%2===0) ? `<div class="fairy-decor" style="left:${p.x-60}px; top:${p.y-48}px; animation-delay:${i*0.25}s;">${DECORS[i % DECORS.length]}</div>` : '';
+      const decor = (i%2===0) ? `<div class="fairy-decor" style="left:${p.x-60}px; top:${p.y-48}px; animation-delay:${i*0.25}s;">${decorIconSVG(DECORS[i % DECORS.length], 24)}</div>` : '';
       return `
       ${decor}
       <div class="fairy-node" style="left:${p.x}px; top:${p.y}px;">
@@ -1327,7 +1340,27 @@ function bottomNav(){
   </div>`;
 }
 
+function speakFrytek(text){
+  if(!('speechSynthesis' in window)) return;
+  if(!musicOn) return; // ten sam przełącznik dźwięku co muzyka w tle
+  try{
+    const clean = text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+    if(!clean) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(clean);
+    utter.lang = 'pl-PL';
+    utter.pitch = 1.4;
+    utter.rate = 1.05;
+    utter.volume = 0.9;
+    const voices = window.speechSynthesis.getVoices();
+    const plVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('pl'));
+    if(plVoice) utter.voice = plVoice;
+    window.speechSynthesis.speak(utter);
+  }catch(e){}
+}
+
 function showBubble(text, duration){
+  speakFrytek(text);
   const wrap = document.getElementById('mascotWrap');
   const bubble = document.getElementById('speechBubble');
   if(!bubble || !wrap) return;
@@ -1935,25 +1968,26 @@ function mascotPointerUp(e){
   }
 }
 
-/* ---- Frytek interactivity: reactions + his own gibberish language ---- */
-const FRYTEK_SYLLABLES = ["fry","zol","bap","chi","doo","ska","lum","pi","wo","zim","ba","tro","nee","fla","mop","chu","ri","glo","ta","voo"];
-const FRYTEK_EXCLAIM = ["!","!!","?!","!!","~!"];
-
-function frytekWord(){
-  const n = 1 + Math.floor(Math.random()*2);
-  let w = "";
-  for(let i=0;i<n;i++){
-    let syl = FRYTEK_SYLLABLES[Math.floor(Math.random()*FRYTEK_SYLLABLES.length)];
-    if(i===0) syl = syl.charAt(0).toUpperCase()+syl.slice(1);
-    w += syl;
-  }
-  return w;
-}
+/* ---- Frytek interactivity: reactions + motywujące zdania ---- */
+const FRYTEK_PHRASES = [
+  "Spróbujmy czegoś nowego! 🍽️",
+  "Jesteś super odkrywcą!",
+  "Mały kęs to duży krok!",
+  "Razem jest raźniej!",
+  "Wierzę w Ciebie!",
+  "Jeszcze jeden smak?",
+  "Super, że tu jesteś!",
+  "Nowe smaki czekają!",
+  "Ja też chcę spróbować!",
+  "Idzie Ci świetnie!",
+  "Każda próba się liczy!",
+  "Dziś jest dobry dzień na coś nowego!",
+  "Jesteśmy drużyną!",
+  "Odwaga smakuje najlepiej!",
+  "Brawo za ciekawość!",
+];
 function frytekPhrase(){
-  const wordCount = 1 + Math.floor(Math.random()*2);
-  const words = [];
-  for(let i=0;i<wordCount;i++) words.push(frytekWord());
-  return words.join("-") + FRYTEK_EXCLAIM[Math.floor(Math.random()*FRYTEK_EXCLAIM.length)];
+  return FRYTEK_PHRASES[Math.floor(Math.random()*FRYTEK_PHRASES.length)];
 }
 
 function playFrytekVoice(){
@@ -2087,8 +2121,27 @@ function showOfflineBanner(){
 /* ---- "Co nowego?" — pokazuje się raz, po każdej aktualizacji apki ----
    WAŻNE (dla mnie / Claude'a przy kolejnych zmianach): przy każdej nowej
    wersji apki podnieś APP_VERSION i dopisz nowy wpis na GÓRZE CHANGELOG. */
-const APP_VERSION = "2026.07.13d";
+const APP_VERSION = "2026.07.13g";
 const CHANGELOG = [
+  {
+    version: "2026.07.13g",
+    changes: [
+      "Frytek ma teraz prawdziwy głos! Kiedy coś mówi, usłyszysz to po polsku, nie tylko przeczytasz",
+      "Głos Frytka włącza/wyłącza się razem z ikoną dźwięku 🔊 w górnym pasku",
+    ]
+  },
+  {
+    version: "2026.07.13f",
+    changes: [
+      "Dekoracje na ścieżce (gwiazdki, tęcze, chmurki...) narysowane teraz w stylu Frytka zamiast gotowych emoji",
+    ]
+  },
+  {
+    version: "2026.07.13e",
+    changes: [
+      "Frytek mówi teraz prawdziwe, motywujące zdania zamiast wymyślonego języka",
+    ]
+  },
   {
     version: "2026.07.13d",
     changes: [
