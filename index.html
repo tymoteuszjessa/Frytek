@@ -2135,7 +2135,8 @@ function renderAuthScreen(mode, errorMsg){
       <h1 class="welcome-title">${isSignUp ? 'Załóż konto rodzinne' : 'Zaloguj się'}</h1>
       <p class="welcome-sub">Wszystkie urządzenia zalogowane na to samo konto będą widzieć te same postępy.</p>
       <input id="authEmail" type="email" autocomplete="email" placeholder="E-mail" style="width:100%; max-width:280px; padding:14px; border-radius:14px; border:2px solid var(--line); margin-bottom:10px; font-size:16px; background:white; color:var(--plum); box-sizing:border-box;">
-      <input id="authPassword" type="password" autocomplete="${isSignUp?'new-password':'current-password'}" placeholder="Hasło" style="width:100%; max-width:280px; padding:14px; border-radius:14px; border:2px solid var(--line); margin-bottom:6px; font-size:16px; background:white; color:var(--plum); box-sizing:border-box;">
+      <input id="authPassword" type="password" autocomplete="${isSignUp?'new-password':'current-password'}" placeholder="Hasło" style="width:100%; max-width:280px; padding:14px; border-radius:14px; border:2px solid var(--line); margin-bottom:${isSignUp?'10px':'6px'}; font-size:16px; background:white; color:var(--plum); box-sizing:border-box;">
+      ${isSignUp ? `<input id="authPassword2" type="password" autocomplete="new-password" placeholder="Powtórz hasło" style="width:100%; max-width:280px; padding:14px; border-radius:14px; border:2px solid var(--line); margin-bottom:6px; font-size:16px; background:white; color:var(--plum); box-sizing:border-box;">` : ''}
       ${errorMsg ? `<p style="color:var(--coral); font-weight:700; font-size:13.5px; margin:6px 0;">${errorMsg}</p>` : ''}
       <button class="btn btn-primary welcome-btn" style="max-width:280px; width:100%;" onclick="submitAuth('${mode}')">${isSignUp ? 'Załóż konto' : 'Zaloguj się'}</button>
       <button class="btn btn-ghost" style="max-width:280px; width:100%;" onclick="renderAuthScreen('${isSignUp?'signin':'signup'}')">${isSignUp ? 'Mam już konto — zaloguj się' : 'Pierwszy raz? Załóż konto rodzinne'}</button>
@@ -2147,16 +2148,22 @@ function submitAuth(mode){
   const email = document.getElementById('authEmail').value.trim();
   const password = document.getElementById('authPassword').value;
   if(!email || !password){ renderAuthScreen(mode, 'Uzupełnij e-mail i hasło.'); return; }
+  if(mode === 'signup'){
+    const password2 = document.getElementById('authPassword2').value;
+    if(password !== password2){ renderAuthScreen(mode, 'Hasła się różnią — wpisz to samo w obu polach.'); return; }
+  }
   const action = mode === 'signup'
     ? fbAuth.createUserWithEmailAndPassword(email, password)
     : fbAuth.signInWithEmailAndPassword(email, password);
   action.catch(err=>{
-    let msg = 'Coś poszło nie tak. Spróbuj ponownie.';
+    let msg = 'Coś poszło nie tak (' + (err.code || 'nieznany błąd') + '). Spróbuj ponownie.';
     if(err.code==='auth/email-already-in-use') msg = 'To konto już istnieje — zaloguj się zamiast zakładać nowe.';
     if(err.code==='auth/invalid-email') msg = 'Nieprawidłowy adres e-mail.';
     if(err.code==='auth/weak-password') msg = 'Hasło musi mieć co najmniej 6 znaków.';
     if(err.code==='auth/wrong-password' || err.code==='auth/invalid-credential') msg = 'Złe hasło albo e-mail.';
     if(err.code==='auth/user-not-found') msg = 'Nie znaleźliśmy takiego konta — załóż nowe.';
+    if(err.code==='auth/unauthorized-domain') msg = 'Ta strona nie jest jeszcze autoryzowana w Firebase (Authentication → Settings → Authorized domains).';
+    if(err.code==='auth/operation-not-allowed') msg = 'Logowanie e-mailem nie jest włączone w Firebase (Authentication → Sign-in method).';
     renderAuthScreen(mode, msg);
   });
   // onAuthStateChanged (poniżej) przejmie dalszy start apki po udanym logowaniu
