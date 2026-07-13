@@ -1371,30 +1371,16 @@ const FRYTEK_RECORDINGS = {
 };
 
 function speakFrytek(text){
-  if(!musicOn) return; // ten sam przełącznik dźwięku co muzyka w tle
   try{
-    const clean = text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '').trim();
+    const clean = text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0E}\u{FE0F}\u{200D}]/gu, '').trim();
     if(!clean) return;
-
     const recording = FRYTEK_RECORDINGS[clean];
     if(recording){
       const audio = new Audio(recording);
       audio.volume = 1;
       audio.play().catch(()=>{});
-      return;
     }
-
-    if(!('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(clean);
-    utter.lang = 'pl-PL';
-    utter.pitch = 1.4;
-    utter.rate = 1.05;
-    utter.volume = 0.9;
-    const voices = window.speechSynthesis.getVoices();
-    const plVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('pl'));
-    if(plVoice) utter.voice = plVoice;
-    window.speechSynthesis.speak(utter);
+    // brak nagrania dla tego zdania = cisza (bez syntetycznego głosu zastępczego)
   }catch(e){}
 }
 
@@ -2240,8 +2226,16 @@ function showOfflineBanner(){
 /* ---- "Co nowego?" — pokazuje się raz, po każdej aktualizacji apki ----
    WAŻNE (dla mnie / Claude'a przy kolejnych zmianach): przy każdej nowej
    wersji apki podnieś APP_VERSION i dopisz nowy wpis na GÓRZE CHANGELOG. */
-const APP_VERSION = "2026.07.14c";
+const APP_VERSION = "2026.07.14d";
 const CHANGELOG = [
+  {
+    version: "2026.07.14d",
+    changes: [
+      "Naprawiony błąd, przez który jedno zdanie ('Spróbujmy czegoś nowego!') zawsze grało głosem sztucznym zamiast Twojego nagrania",
+      "Usunięty głos syntetyczny — teraz słychać wyłącznie prawdziwe nagrania (dla zdań, które już nagraliście)",
+      "Głos Frytka działa teraz niezależnie od przełącznika muzyki 🔊",
+    ]
+  },
   {
     version: "2026.07.14c",
     changes: [
